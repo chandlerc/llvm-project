@@ -62,6 +62,12 @@ namespace sys {
     uint64_t PeakMemory = 0; ///< Maximum resident set size in KiB.
   };
 
+  struct RedirectPaths {
+    std::optional<StringRef> StdIn;
+    std::optional<StringRef> StdOut;
+    std::optional<StringRef> StdErr;
+  };
+
   /// Find the first executable file \p Name in \p Paths.
   ///
   /// This does not perform hashing as a shell would but instead stats each PATH
@@ -112,14 +118,14 @@ namespace sys {
       ///< strings to use for the program's environment. If not provided, the
       ///< current program's environment will be used.  If specified, the
       ///< vector should **not** be terminated by an empty StringRef.
-      ArrayRef<std::optional<StringRef>> Redirects = {}, ///<
-      ///< An array of optional paths. Should have a size of zero or three.
-      ///< If the array is empty, no redirections are performed.
-      ///< Otherwise, the inferior process's stdin(0), stdout(1), and stderr(2)
-      ///< will be redirected to the corresponding paths, if the optional path
-      ///< is present (not \c std::nullopt).
-      ///< When an empty path is passed in, the corresponding file descriptor
-      ///< will be disconnected (ie, /dev/null'd) in a portable way.
+      std::optional<RedirectPaths> Redirects =
+          std::nullopt, ///< An optional array of optional paths.
+      ///< If array is passed it should have a size of exactly three. When an
+      ///< array is provided, the inferior process's stdin(0), stdout(1), and
+      ///< stderr(2) will be redirected to the corresponding paths, if the
+      ///< optional path is present (not \c std::nullopt). When an empty path is
+      ///< passed in, the corresponding file descriptor will be disconnected
+      ///< (ie, /dev/null'd) in a portable way.
       unsigned SecondsToWait = 0, ///< If non-zero, this specifies the amount
       ///< of time to wait for the child process to exit. If the time
       ///< expires, the child is killed and this call returns. If zero,
@@ -149,7 +155,8 @@ namespace sys {
   ProcessInfo ExecuteNoWait(
       StringRef Program, ArrayRef<StringRef> Args,
       std::optional<ArrayRef<StringRef>> Env,
-      ArrayRef<std::optional<StringRef>> Redirects = {},
+      std::optional<RedirectPaths> Redirects =
+          std::nullopt,
       unsigned MemoryLimit = 0, std::string *ErrMsg = nullptr,
       bool *ExecutionFailed = nullptr, BitVector *AffinityMask = nullptr,
       /// If true the executed program detatches from the controlling

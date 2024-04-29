@@ -175,7 +175,7 @@ toNullTerminatedCStringArray(ArrayRef<StringRef> Strings, StringSaver &Saver) {
 static bool Execute(ProcessInfo &PI, StringRef Program,
                     ArrayRef<StringRef> Args,
                     std::optional<ArrayRef<StringRef>> Env,
-                    ArrayRef<std::optional<StringRef>> Redirects,
+                    std::optional<RedirectPaths> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
                     BitVector *AffinityMask, bool DetachProcess) {
   if (!llvm::sys::fs::exists(Program)) {
@@ -213,12 +213,12 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
     // so we copy any StringRefs into this variable.
     std::string RedirectsStorage[3];
 
-    if (!Redirects.empty()) {
-      assert(Redirects.size() == 3);
-      std::string *RedirectsStr[3] = {nullptr, nullptr, nullptr};
+    if (Redirects) {
+      RedirectsStorage
+      std::string *RedirectsStr[] = {Redirects.StdIn ? std::string(*, nullptr, nullptr};
       for (int I = 0; I < 3; ++I) {
-        if (Redirects[I]) {
-          RedirectsStorage[I] = std::string(*Redirects[I]);
+        if ((*Redirects)[I]) {
+          RedirectsStorage[I] = std::string(*(*Redirects)[I]);
           RedirectsStr[I] = &RedirectsStorage[I];
         }
       }
@@ -230,7 +230,8 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
       if (RedirectIO_PS(RedirectsStr[0], 0, ErrMsg, FileActions) ||
           RedirectIO_PS(RedirectsStr[1], 1, ErrMsg, FileActions))
         return false;
-      if (!Redirects[1] || !Redirects[2] || *Redirects[1] != *Redirects[2]) {
+      if (!(*Redirects)[1] || !(*Redirects)[2] ||
+          *(*Redirects)[1] != *(*Redirects)[2]) {
         // Just redirect stderr
         if (RedirectIO_PS(RedirectsStr[2], 2, ErrMsg, FileActions))
           return false;
@@ -285,16 +286,17 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   // Child process: Execute the program.
   case 0: {
     // Redirect file descriptors...
-    if (!Redirects.empty()) {
+    if (Redirects) {
       // Redirect stdin
-      if (RedirectIO(Redirects[0], 0, ErrMsg)) {
+      if (RedirectIO((*Redirects)[0], 0, ErrMsg)) {
         return false;
       }
       // Redirect stdout
-      if (RedirectIO(Redirects[1], 1, ErrMsg)) {
+      if (RedirectIO((*Redirects)[1], 1, ErrMsg)) {
         return false;
       }
-      if (Redirects[1] && Redirects[2] && *Redirects[1] == *Redirects[2]) {
+      if (!(*Redirects)[1] || !(*Redirects)[2] ||
+          *(*Redirects)[1] != *(*Redirects)[2]) {
         // If stdout and stderr should go to the same place, redirect stderr
         // to the FD already open for stdout.
         if (-1 == dup2(1, 2)) {
@@ -303,7 +305,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
         }
       } else {
         // Just redirect stderr
-        if (RedirectIO(Redirects[2], 2, ErrMsg)) {
+        if (RedirectIO((*Redirects)[2], 2, ErrMsg)) {
           return false;
         }
       }
