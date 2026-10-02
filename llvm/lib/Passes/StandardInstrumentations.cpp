@@ -1626,6 +1626,20 @@ void TimeProfilingPassesHandler::registerCallbacks(
 }
 
 void TimeProfilingPassesHandler::runBeforePass(StringRef PassID, IRUnitRef IR) {
+  if (!timeTraceProfilerEnabled())
+    return;
+  if (isa<Module>(IR)) {
+    timeTraceProfilerBegin(PassID, "[module]");
+    return;
+  }
+  if (const auto *F = dyn_cast<Function>(IR)) {
+    timeTraceProfilerBegin(PassID, F->getName());
+    return;
+  }
+  if (const auto *MF = dyn_cast<MachineFunction>(IR)) {
+    timeTraceProfilerBegin(PassID, MF->getName());
+    return;
+  }
   timeTraceProfilerBegin(PassID, getIRName(IR));
 }
 

@@ -5158,7 +5158,7 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
     if (!shouldEmitFunction(GD))
       return;
 
-    llvm::TimeTraceScope TimeScope("CodeGen Function", [&]() {
+    llvm::TimeTraceScope TimeScope("CodeGen Function", [FD, this]() {
       std::string Name;
       llvm::raw_string_ostream OS(Name);
       FD->getNameForDiagnostic(OS, getContext().getPrintingPolicy(),

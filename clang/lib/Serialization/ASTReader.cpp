@@ -8779,7 +8779,7 @@ bool ASTReader::LoadExternalSpecializationsImpl(
   llvm::SmallVector<serialization::reader::LazySpecializationInfo, 8> Infos =
       It->second.Table.find(HashValue);
 
-  llvm::TimeTraceScope TimeScope("Load External Specializations for ", [&] {
+  llvm::TimeTraceScope TimeScope("Load External Specializations for ", [D] {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
     auto *ND = cast<NamedDecl>(D);

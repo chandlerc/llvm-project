@@ -3565,7 +3565,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
           TagType == DeclSpec::TST_union || TagType == DeclSpec::TST_class) &&
          "Invalid TagType!");
 
-  llvm::TimeTraceScope TimeScope("ParseClass", [&]() {
+  llvm::TimeTraceScope TimeScope("ParseClass", [TagDecl]() {
     if (auto *TD = dyn_cast_or_null<NamedDecl>(TagDecl))
       return TD->getQualifiedNameAsString();
     return std::string("<anonymous>");

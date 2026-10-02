@@ -145,4 +145,39 @@ TEST(TimeProfiler, Child_Clamped_Within_Parent) {
   }
 }
 
+TEST(TimeProfiler, Deferred_Detail_Callback) {
+  setupProfiler(/*Granularity=*/2000);
+
+  int SubGranularityCalls = 0;
+  int RetainedCalls = 0;
+  {
+    TimeTraceScope FastScope("fast", [&] {
+      ++SubGranularityCalls;
+      return std::string("fast detail");
+    });
+  }
+  {
+    TimeTraceScope SlowScope("slow", [&] {
+      ++RetainedCalls;
+      return std::string("slow detail");
+    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(3));
+  }
+
+  // Detail callbacks are not evaluated during the profiled scopes.
+  EXPECT_EQ(SubGranularityCalls, 0);
+  EXPECT_EQ(RetainedCalls, 0);
+
+  // Finalizing resolves retained callbacks without evaluating sub-granularity
+  // callbacks.
+  timeTraceProfilerFinalize();
+  EXPECT_EQ(SubGranularityCalls, 0);
+  EXPECT_EQ(RetainedCalls, 1);
+
+  std::string Json = teardownProfiler();
+  EXPECT_EQ(SubGranularityCalls, 0);
+  EXPECT_EQ(RetainedCalls, 1);
+  EXPECT_TRUE(Json.find(R"("detail":"slow detail")") != std::string::npos);
+}
+
 } // namespace

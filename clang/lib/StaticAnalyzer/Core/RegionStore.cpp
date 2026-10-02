@@ -2574,7 +2574,7 @@ StoreRef RegionStoreManager::killBinding(Store ST, Loc L) {
 LimitedRegionBindingsRef
 RegionStoreManager::bind(LimitedRegionBindingsConstRef B, Loc L, SVal V) {
   llvm::TimeTraceScope TimeScope("RegionStoreManager::bind",
-                                 [&L]() { return locDescr(L); });
+                                 [L]() { return locDescr(L); });
 
   if (B.hasExhaustedBindingLimit())
     return B.withValuesEscaped(V);

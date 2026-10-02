@@ -619,13 +619,16 @@ namespace {
   // {"name":"EvaluateAsRValue","args":{"detail":"<test.cc:8:21, col:25>"}}}
   class ExprTimeTraceScope {
   public:
-    ExprTimeTraceScope(const Expr *E, const ASTContext &Ctx, StringRef Name)
-        : TimeScope(Name, [E, &Ctx] {
-            return E->getSourceRange().printToString(Ctx.getSourceManager());
-          }) {}
+    ExprTimeTraceScope(const Expr *E, const ASTContext &Ctx, StringRef Name) {
+      if (llvm::timeTraceProfilerEnabled())
+        TimeScope.emplace(
+            Name, [Range = E->getSourceRange(), &SM = Ctx.getSourceManager()] {
+              return Range.printToString(SM);
+            });
+    }
 
   private:
-    llvm::TimeTraceScope TimeScope;
+    std::optional<llvm::TimeTraceScope> TimeScope;
   };
 
   /// RAII object used to change the current ability of
@@ -22176,7 +22179,7 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
          "Expression evaluator can't be called on a dependent expression.");
   assert(VD && "Need a valid VarDecl");
 
-  llvm::TimeTraceScope TimeScope("EvaluateAsInitializer", [&] {
+  llvm::TimeTraceScope TimeScope("EvaluateAsInitializer", [VD] {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
     VD->printQualifiedName(OS);
@@ -23018,7 +23021,7 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
-  llvm::TimeTraceScope TimeScope("EvaluateWithSubstitution", [&] {
+  llvm::TimeTraceScope TimeScope("EvaluateWithSubstitution", [Callee, &Ctx] {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
     Callee->getNameForDiagnostic(OS, Ctx.getPrintingPolicy(),
@@ -23106,7 +23109,7 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
   if (FD->isDependentContext())
     return true;
 
-  llvm::TimeTraceScope TimeScope("isPotentialConstantExpr", [&] {
+  llvm::TimeTraceScope TimeScope("isPotentialConstantExpr", [FD] {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
     FD->getNameForDiagnostic(OS, FD->getASTContext().getPrintingPolicy(),

@@ -19355,13 +19355,14 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
             PendingInstantiations.push_back(
                 std::make_pair(Func, PointOfInstantiation));
             if (llvm::isTimeTraceVerbose()) {
-              llvm::timeTraceAddInstantEvent("DeferInstantiation", [&] {
-                std::string Name;
-                llvm::raw_string_ostream OS(Name);
-                Func->getNameForDiagnostic(OS, getPrintingPolicy(),
-                                           /*Qualified=*/true);
-                return Name;
-              });
+              llvm::timeTraceAddInstantEvent(
+                  "DeferInstantiation", [Func, this] {
+                    std::string Name;
+                    llvm::raw_string_ostream OS(Name);
+                    Func->getNameForDiagnostic(OS, getPrintingPolicy(),
+                                               /*Qualified=*/true);
+                    return Name;
+                  });
             }
             // Notify the consumer that a function was implicitly instantiated.
             Consumer.HandleCXXImplicitFunctionInstantiation(Func);

@@ -280,6 +280,7 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
     // things in ASTContext used after this point and null out the
     // ASTContext, but too many various parts of the ASTContext are still
     // used in various parts.
+    llvm::timeTraceProfilerFinalize();
     C.cleanup();
     C.getAllocator().Reset();
   }

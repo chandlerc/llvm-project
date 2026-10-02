@@ -726,6 +726,8 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
     return;
 
   // Clear the AnalysisManager of old AnalysisDeclContexts.
+  if (llvm::timeTraceProfilerEnabled())
+    llvm::timeTraceProfilerFinalize();
   Mgr->ClearContexts();
   // Ignore autosynthesized code.
   if (Mgr->getAnalysisDeclContext(D)->isBodyAutosynthesized())

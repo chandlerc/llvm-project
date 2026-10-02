@@ -47,6 +47,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -1415,6 +1416,7 @@ void FrontendAction::EndSourceFile() {
     CI.resetAndLeakASTContext();
     llvm::BuryPointer(CI.takeASTConsumer().get());
   } else {
+    llvm::timeTraceProfilerFinalize();
     CI.setSema(nullptr);
     CI.setASTContext(nullptr);
     CI.setASTConsumer(nullptr);

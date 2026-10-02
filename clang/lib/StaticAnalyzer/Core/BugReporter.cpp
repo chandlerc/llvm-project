@@ -2527,6 +2527,8 @@ BugReporter::~BugReporter() {
   assert(StrBugTypes.empty() &&
          "Destroying BugReporter before diagnostics are emitted!");
 
+  if (llvm::timeTraceProfilerEnabled())
+    llvm::timeTraceProfilerFinalize();
   // Free the bug reports we are tracking.
   for (const auto I : EQClassesVector)
     delete I;
@@ -2537,6 +2539,9 @@ void BugReporter::FlushReports() {
   // of the reports is consistent between runs.
   for (const auto EQ : EQClassesVector)
     FlushReport(*EQ);
+
+  if (llvm::timeTraceProfilerEnabled())
+    llvm::timeTraceProfilerFinalize();
 
   // BugReporter owns and deletes only BugTypes created implicitly through
   // EmitBasicReport.
@@ -3139,9 +3144,9 @@ BugReport *PathSensitiveBugReporter::findReportInEquivalenceClass(
 }
 
 void BugReporter::FlushReport(BugReportEquivClass &EQ) {
-  llvm::TimeTraceScope TCS{timeTraceName(EQ), [&]() {
-                             return timeTraceMetadata(EQ, getSourceManager());
-                           }};
+  llvm::TimeTraceScope TCS{
+      timeTraceName(EQ),
+      [&EQ, &SM = getSourceManager()]() { return timeTraceMetadata(EQ, SM); }};
   SmallVector<BugReport*, 10> bugReports;
   BugReport *report = findReportInEquivalenceClass(EQ, bugReports);
   if (!report)

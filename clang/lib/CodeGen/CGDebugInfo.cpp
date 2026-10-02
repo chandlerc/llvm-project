@@ -4318,7 +4318,7 @@ llvm::DIType *CGDebugInfo::getOrCreateType(QualType Ty, llvm::DIFile *Unit) {
   if (Ty.isNull())
     return nullptr;
 
-  llvm::TimeTraceScope TimeScope("DebugType", [&]() {
+  llvm::TimeTraceScope TimeScope("DebugType", [Ty, this]() {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
     Ty.print(OS, getPrintingPolicy());
@@ -5166,9 +5166,8 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   if (!D)
     return;
 
-  llvm::TimeTraceScope TimeScope("DebugFunction", [&]() {
-    return GetName(D, true);
-  });
+  llvm::TimeTraceScope TimeScope("DebugFunction",
+                                 [D, this]() { return GetName(D, true); });
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   llvm::DIFile *Unit = getOrCreateFile(Loc);
@@ -6342,9 +6341,8 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
   if (D->hasAttr<NoDebugAttr>())
     return;
 
-  llvm::TimeTraceScope TimeScope("DebugGlobalVariable", [&]() {
-    return GetName(D, true);
-  });
+  llvm::TimeTraceScope TimeScope("DebugGlobalVariable",
+                                 [D, this]() { return GetName(D, true); });
 
   // If we already created a DIGlobalVariable for this declaration, just attach
   // it to the llvm::GlobalVariable.
@@ -6406,9 +6404,8 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   if (VD->hasAttr<NoDebugAttr>())
     return;
-  llvm::TimeTraceScope TimeScope("DebugConstGlobalVariable", [&]() {
-    return GetName(VD, true);
-  });
+  llvm::TimeTraceScope TimeScope("DebugConstGlobalVariable",
+                                 [VD, this]() { return GetName(VD, true); });
 
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
   // Create the descriptor for the variable.

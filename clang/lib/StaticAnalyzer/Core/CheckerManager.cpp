@@ -448,9 +448,9 @@ void CheckerManager::runCheckersForBind(ExplodedNodeSet &Dst,
                                         bool AtDeclInit, ExprEngine &Eng,
                                         const ProgramPoint &PP) {
   CheckBindContext C(BindCheckers, location, val, S, AtDeclInit, Eng, PP);
-  llvm::TimeTraceScope TimeScope{
-      "CheckerManager::runCheckersForBind",
-      [&val]() { return getTimeTraceBindMetadata(val); }};
+  llvm::TimeTraceScope TimeScope{"CheckerManager::runCheckersForBind", [val]() {
+                                   return getTimeTraceBindMetadata(val);
+                                 }};
   expandGraphWithCheckers(C, Dst, Src);
 }
 

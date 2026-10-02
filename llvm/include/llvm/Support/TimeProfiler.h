@@ -34,7 +34,7 @@
 // names to be fairly generic, and rely on the detail field to capture
 // everything else of interest.
 //
-// To avoid lifetime issues name and detail strings are copied into the event
+// To avoid lifetime issues, name and detail strings are copied into the event
 // entries at their time of creation. Care should be taken to make string
 // construction cheap to prevent 'Heisenperf' effects. In particular, the
 // 'detail' argument may be a string-returning closure:
@@ -47,8 +47,10 @@
 //     ...my code...
 //   }
 // \endcode
-// The closure will not be called if tracing is disabled. Otherwise, the
-// resulting string will be directly moved into the entry.
+// The closure will not be called if tracing is disabled or if the event is
+// shorter than the configured granularity. Otherwise, the closure is deferred
+// until trace finalization or write time, so captured references must outlive
+// either the timeTraceProfilerFinalize or timeTraceProfilerWrite call.
 //
 // The main process should begin with a timeTraceProfilerInitialize, and
 // finish with timeTraceProfileWrite and timeTraceProfilerCleanup calls.
@@ -68,15 +70,14 @@
 // Future work:
 //  - Support akin to LLVM_DEBUG for runtime enable/disable of named tracing
 //    families for non-debug builds which wish to support optional tracing.
-//  - Evaluate the detail closures at profile write time to avoid
-//    stringification costs interfering with tracing.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_TIMEPROFILER_H
 #define LLVM_SUPPORT_TIMEPROFILER_H
 
-#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
@@ -126,6 +127,11 @@ LLVM_ABI void timeTraceProfilerCleanup();
 /// Finish a time trace profiler running on a worker thread.
 LLVM_ABI void timeTraceProfilerFinishThread();
 
+/// Evaluate any deferred detail/metadata closures on the current thread and
+/// finished worker threads before referenced data structures (such as an AST)
+/// are torn down. This is also called automatically by timeTraceProfilerWrite.
+LLVM_ABI void timeTraceProfilerFinalize();
+
 /// Is the time trace profiler enabled, i.e. initialized?
 inline bool timeTraceProfilerEnabled() {
   return getTimeTraceProfilerInstance() != nullptr;
@@ -152,11 +158,11 @@ LLVM_ABI TimeTraceProfilerEntry *timeTraceProfilerBegin(StringRef Name,
                                                         StringRef Detail);
 LLVM_ABI TimeTraceProfilerEntry *
 timeTraceProfilerBegin(StringRef Name,
-                       llvm::function_ref<std::string()> Detail);
+                       llvm::unique_function<std::string()> Detail);
 
 LLVM_ABI TimeTraceProfilerEntry *
 timeTraceProfilerBegin(StringRef Name,
-                       llvm::function_ref<TimeTraceMetadata()> MetaData);
+                       llvm::unique_function<TimeTraceMetadata()> MetaData);
 
 /// Manually begin a time section, with the given \p Name and \p Detail.
 /// This starts Async Events having \p Name as a category which is shown
@@ -169,7 +175,7 @@ LLVM_ABI TimeTraceProfilerEntry *timeTraceAsyncProfilerBegin(StringRef Name,
 // Mark an instant event.
 LLVM_ABI void
 timeTraceAddInstantEvent(StringRef Name,
-                         llvm::function_ref<std::string()> Detail);
+                         llvm::unique_function<std::string()> Detail);
 
 /// Manually end the last time section.
 LLVM_ABI void timeTraceProfilerEnd();
@@ -191,11 +197,11 @@ public:
       : Entry(timeTraceProfilerBegin(Name, StringRef())) {}
   TimeTraceScope(StringRef Name, StringRef Detail)
       : Entry(timeTraceProfilerBegin(Name, Detail)) {}
-  TimeTraceScope(StringRef Name, llvm::function_ref<std::string()> Detail)
-      : Entry(timeTraceProfilerBegin(Name, Detail)) {}
+  TimeTraceScope(StringRef Name, llvm::unique_function<std::string()> Detail)
+      : Entry(timeTraceProfilerBegin(Name, std::move(Detail))) {}
   TimeTraceScope(StringRef Name,
-                 llvm::function_ref<TimeTraceMetadata()> Metadata)
-      : Entry(timeTraceProfilerBegin(Name, Metadata)) {}
+                 llvm::unique_function<TimeTraceMetadata()> Metadata)
+      : Entry(timeTraceProfilerBegin(Name, std::move(Metadata))) {}
   ~TimeTraceScope() {
     if (Entry)
       timeTraceProfilerEnd(Entry);

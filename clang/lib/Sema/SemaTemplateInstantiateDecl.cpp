@@ -5990,7 +5990,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     return;
   }
 
-  llvm::TimeTraceScope TimeScope("InstantiateFunction", [&]() {
+  llvm::TimeTraceScope TimeScope("InstantiateFunction", [Function, this]() {
     llvm::TimeTraceMetadata M;
     llvm::raw_string_ostream OS(M.Detail);
     Function->getNameForDiagnostic(OS, getPrintingPolicy(),

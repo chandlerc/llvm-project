@@ -146,7 +146,7 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   bool HaveLexer = S.getPreprocessor().getCurrentLexer();
 
   if (HaveLexer) {
-    llvm::TimeTraceScope TimeScope("Frontend", [&]() {
+    llvm::TimeTraceScope TimeScope("Frontend", [&S]() {
       llvm::TimeTraceMetadata M;
       if (llvm::isTimeTraceVerbose()) {
         const SourceManager &SM = S.getSourceManager();

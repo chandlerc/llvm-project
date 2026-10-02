@@ -1031,8 +1031,10 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   for (const FrontendInputFile &FIF : getFrontendOpts().Inputs) {
     // Reset the ID tables if we are reusing the SourceManager and parsing
     // regular files.
-    if (hasSourceManager() && !Act.isModelParsingAction())
+    if (hasSourceManager() && !Act.isModelParsingAction()) {
+      llvm::timeTraceProfilerFinalize();
       getSourceManager().clearIDTables();
+    }
 
     ModuleImportResults.clear();
 

@@ -3581,7 +3581,7 @@ bool Sema::InstantiateClassImpl(
                                      Pattern, PatternDef, TSK, Complain))
     return true;
 
-  llvm::TimeTraceScope TimeScope("InstantiateClass", [&]() {
+  llvm::TimeTraceScope TimeScope("InstantiateClass", [Instantiation, this]() {
     llvm::TimeTraceMetadata M;
     llvm::raw_string_ostream OS(M.Detail);
     Instantiation->getNameForDiagnostic(OS, getPrintingPolicy(),
