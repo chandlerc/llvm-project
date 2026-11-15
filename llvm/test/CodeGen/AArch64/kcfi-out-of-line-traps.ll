@@ -459,7 +459,7 @@ attributes #2 = { "branch-target-enforcement" "branch-protection-pauth-lr" "sign
 
 !llvm.module.flags = !{!0, !1, !2, !3}
 !0 = !{i32 4, !"kcfi", i32 1}
-!1 = !{i32 8, !"kcfi-out-of-line-traps", i32 1}
+!1 = !{i32 7, !"kcfi-out-of-line-traps", i32 1}
 !2 = !{i32 8, !"branch-target-enforcement", i32 1}
 !3 = !{i32 1, !"ProfileSummary", !4}
 !4 = !{!5, !6, !7, !8, !9, !10, !11, !12}

@@ -6,9 +6,10 @@
 ; RUN: llvm-link %t/nokcfi.ll %t/ool.ll | llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefix=NOKCFI
 
 ;; Verify kcfi-out-of-line-traps module flag semantics:
-;; Linking an opt-in module (Module::Min) with an absent module merges to 0
-;; so mixed LTO links keep inline traps, while linking two opt-in modules
-;; preserves out-of-line traps.
+;; - KCFI opt-in emits Max (7, value 1) and KCFI inline emits Override (4, value 0),
+;;   so linking any KCFI-inline module forces inline traps regardless of link order.
+;; - Non-KCFI modules omit the flag so linking with uninstrumented bitcode preserves
+;;   out-of-line traps in KCFI modules.
 
 ;--- ool.ll
 define void @f_ool(ptr noundef %x) {
@@ -17,7 +18,7 @@ define void @f_ool(ptr noundef %x) {
 }
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 4, !"kcfi", i32 1}
-!1 = !{i32 8, !"kcfi-out-of-line-traps", i32 1}
+!1 = !{i32 7, !"kcfi-out-of-line-traps", i32 1}
 
 ;--- ool2.ll
 define void @f_ool2(ptr noundef %x) {
@@ -26,7 +27,7 @@ define void @f_ool2(ptr noundef %x) {
 }
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 4, !"kcfi", i32 1}
-!1 = !{i32 8, !"kcfi-out-of-line-traps", i32 1}
+!1 = !{i32 7, !"kcfi-out-of-line-traps", i32 1}
 
 ; OOL-LABEL: f_ool:
 ; OOL:         jne [[TRAP1:.LBB[0-9_]+]]
@@ -44,8 +45,9 @@ define void @f_inline(ptr noundef %x) {
   call void %x() [ "kcfi"(i32 12345678) ]
   ret void
 }
-!llvm.module.flags = !{!0}
+!llvm.module.flags = !{!0, !1}
 !0 = !{i32 4, !"kcfi", i32 1}
+!1 = !{i32 4, !"kcfi-out-of-line-traps", i32 0}
 
 ; INLINE-LABEL: f_ool:
 ; INLINE:         je [[PASS1:.Ltmp[0-9]+]]
@@ -80,10 +82,8 @@ define void @f_nokcfi() {
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"wchar_size", i32 4}
 
-;; FIXME: linking with a non-KCFI module drops out-of-line traps.
 ; NOKCFI-LABEL: f_ool:
-; NOKCFI:         je [[PASS:.Ltmp[0-9]+]]
-; NOKCFI-NEXT:  .Ltmp{{[0-9]+}}:
-; NOKCFI-NEXT:    ud2
-; NOKCFI:       [[PASS]]:
-; NOKCFI-NEXT:    callq *%rdi
+; NOKCFI:         jne [[TRAP:.LBB[0-9_]+]]
+; NOKCFI:         callq *%rdi
+; NOKCFI:       [[TRAP]]:
+; NOKCFI:         ud2

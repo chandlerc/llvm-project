@@ -212,7 +212,7 @@ attributes #0 = { "target-features"="+retpoline-indirect-branches,+retpoline-ind
 
 !llvm.module.flags = !{!0, !1, !2}
 !0 = !{i32 4, !"kcfi", i32 1}
-!1 = !{i32 8, !"kcfi-out-of-line-traps", i32 1}
+!1 = !{i32 7, !"kcfi-out-of-line-traps", i32 1}
 !2 = !{i32 1, !"ProfileSummary", !3}
 !3 = !{!4, !5, !6, !7, !8, !9, !10, !11}
 !4 = !{!"ProfileFormat", !"InstrProf"}
