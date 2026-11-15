@@ -1,6 +1,9 @@
 ; RUN: split-file %s %t
 ; RUN: llvm-link %t/ool.ll %t/inline.ll | llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefix=INLINE
+; RUN: llvm-link %t/inline.ll %t/ool.ll | llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefix=INLINE-REV
 ; RUN: llvm-link %t/ool.ll %t/ool2.ll | llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefix=OOL
+; RUN: llvm-link %t/ool.ll %t/nokcfi.ll | llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefix=NOKCFI
+; RUN: llvm-link %t/nokcfi.ll %t/ool.ll | llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs | FileCheck %s --check-prefix=NOKCFI
 
 ;; Verify kcfi-out-of-line-traps module flag semantics:
 ;; Linking an opt-in module (Module::Min) with an absent module merges to 0
@@ -56,3 +59,31 @@ define void @f_inline(ptr noundef %x) {
 ; INLINE-NEXT:    ud2
 ; INLINE:       [[PASS2]]:
 ; INLINE-NEXT:    callq *%rdi
+
+; INLINE-REV-LABEL: f_inline:
+; INLINE-REV:         je [[PASS3:.Ltmp[0-9]+]]
+; INLINE-REV-NEXT:  .Ltmp{{[0-9]+}}:
+; INLINE-REV-NEXT:    ud2
+; INLINE-REV:       [[PASS3]]:
+; INLINE-REV-NEXT:    callq *%rdi
+; INLINE-REV-LABEL: f_ool:
+; INLINE-REV:         je [[PASS4:.Ltmp[0-9]+]]
+; INLINE-REV-NEXT:  .Ltmp{{[0-9]+}}:
+; INLINE-REV-NEXT:    ud2
+; INLINE-REV:       [[PASS4]]:
+; INLINE-REV-NEXT:    callq *%rdi
+
+;--- nokcfi.ll
+define void @f_nokcfi() {
+  ret void
+}
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"wchar_size", i32 4}
+
+;; FIXME: linking with a non-KCFI module drops out-of-line traps.
+; NOKCFI-LABEL: f_ool:
+; NOKCFI:         je [[PASS:.Ltmp[0-9]+]]
+; NOKCFI-NEXT:  .Ltmp{{[0-9]+}}:
+; NOKCFI-NEXT:    ud2
+; NOKCFI:       [[PASS]]:
+; NOKCFI-NEXT:    callq *%rdi
