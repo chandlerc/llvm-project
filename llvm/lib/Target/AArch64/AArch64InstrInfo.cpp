@@ -11940,7 +11940,9 @@ bool AArch64InstrInfo::isMBBSafeToSplitToCold(
   MachineBasicBlock::const_iterator LastI = MBB.getLastNonDebugInstr();
   if ((LastI != MBB.end() && LastI->getOpcode() == AArch64::KCFI_TRAP) ||
       endsWithKCFICmp(MBB) ||
-      (MBB.pred_size() == 1 && endsWithKCFICmp(**MBB.pred_begin())))
+      llvm::any_of(MBB.predecessors(), [](const MachineBasicBlock *Pred) {
+        return endsWithKCFICmp(*Pred);
+      }))
     return false;
 
   // Because jump tables are label-relative instead of table-relative, they all
