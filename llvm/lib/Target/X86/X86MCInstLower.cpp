@@ -918,10 +918,17 @@ void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   // its KCFI_TRAP, which falls through to the call.
   bool IsCmp = MI.getOpcode() == X86::KCFI_CMP;
   if (IsCmp) {
-    MachineBasicBlock::const_instr_iterator Next =
-        next_nodbg(MI.getIterator(), MI.getParent()->instr_end());
-    assert(Next != MI.getParent()->instr_end() && Next->isConditionalBranch() &&
+#ifndef NDEBUG
+    // The branch to the trap is the first terminator after KCFI_CMP. Other
+    // instructions (e.g. an LFENCE from SESES) may be in between, as long as
+    // they don't clobber EFLAGS.
+    auto It = std::next(MI.getIterator()), End = MI.getParent()->instr_end();
+    for (; It != End && !It->isTerminator(); ++It)
+      assert(!It->modifiesRegister(X86::EFLAGS, /*TRI=*/nullptr) &&
+             "EFLAGS clobbered between KCFI_CMP and its branch");
+    assert(It != End && It->isConditionalBranch() &&
            "KCFI_CMP not followed by a conditional branch");
+#endif
   } else {
     assert(std::next(MI.getIterator())->isCall() &&
            "KCFI_CHECK not followed by a call instruction");
