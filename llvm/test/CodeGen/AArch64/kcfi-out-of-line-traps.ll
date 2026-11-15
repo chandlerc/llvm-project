@@ -294,6 +294,48 @@ hot:
   ret void
 }
 
+;; When BranchFolder tail-merges two cold split call blocks, all predecessors
+;; end with KCFI_CMP, so the merged call block must still stay out of the cold
+;; section.
+;; FIXME: the merged call block is moved into the cold section.
+define void @f10_tailmerge(ptr noundef %x, i1 %c1, i1 %c2, i1 %c3) !prof !17 {
+; SPLIT-LABEL: f10_tailmerge:
+; SPLIT:         cmp w16, w17
+; SPLIT-NEXT:    b.eq
+; SPLIT-NEXT:  // %bb.
+; SPLIT-NEXT:    brk #0x8220
+; SPLIT:         cmp w16, w17
+; SPLIT-NEXT:    b.eq
+; SPLIT-NEXT:  // %bb.
+; SPLIT-NEXT:    brk #0x8220
+; SPLIT-NOT:     blr
+; SPLIT:         .section .text.split.f10_tailmerge,"ax",@progbits
+; SPLIT-NEXT:  f10_tailmerge.cold:
+; SPLIT:         blr x0
+; SPLIT:         bl cleanup
+; SPLIT:         .size f10_tailmerge.cold
+entry:
+  br i1 %c1, label %cold1, label %check2, !prof !18
+check2:
+  br i1 %c2, label %cold2, label %check3, !prof !18
+check3:
+  br i1 %c3, label %cold3, label %hot, !prof !18
+cold1:
+  call void %x() [ "kcfi"(i32 12345678) ]
+  call void @cleanup()
+  ret void
+cold2:
+  call void %x() [ "kcfi"(i32 87654321) ]
+  call void @cleanup()
+  ret void
+cold3:
+  call void @cleanup()
+  call void @cleanup()
+  ret void
+hot:
+  ret void
+}
+
 ;; KCFI_CMP and KCFI_TRAP are never outlined by the machine outliner, preserving
 ;; patchable-function-prefix offsets, X16/X17/NZCV liveness, and distinct trap
 ;; sites.
