@@ -385,6 +385,28 @@ define tailcc void @f13(ptr noundef %x, i64, i64, i64, i64, i64, i64, i64, i64) 
   ret void
 }
 
+;; PAC-RET epilogue lowering queries getArgumentStackToRestore after KCFI
+;; bundles the inline check with TCRETURNrix17.
+define tailcc void @f13_pac(ptr noundef %x, i64, i64, i64, i64, i64, i64, i64, i64) #2 {
+; ASM-LABEL: f13_pac:
+; ASM:         hint #29
+; ASM-NEXT:    ldur w16, [x17, #-4]
+; ASM:         cmp w16, w9
+; ASM-NEXT:    b.eq [[PASS:\.Ltmp[0-9]+]]
+; ASM-NEXT:    brk #0x8131
+; ASM-NEXT:  [[PASS]]:
+; ASM-NEXT:    br x17
+
+; MIR-LABEL: name: f13_pac
+; MIR:       BUNDLE{{.*}} {
+; MIR-NEXT:    KCFI_CHECK $x17, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
+; MIR-NEXT:    TCRETURNrix17 internal killed $x17, 0, csr_aarch64_aapcs, implicit $sp
+; MIR-NEXT:  }
+  call void @cleanup()
+  tail call tailcc void %x(ptr %x, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0) [ "kcfi"(i32 12345678) ]
+  ret void
+}
+
 ;; Functions with Speculative Load Hardening fall back to inline KCFI checks so
 ;; KCFI_CMP does not interfere with X16 taint tracking or degrade hardening to
 ;; full barriers.
