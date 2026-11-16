@@ -19,8 +19,22 @@
 #define LIBC_HAS_ADDRESS_SANITIZER
 #endif
 
+#if LIBC_HAS_FEATURE(hwaddress_sanitizer) || defined(__SANITIZE_HWADDRESS__)
+#define LIBC_HAS_HWADDRESS_SANITIZER
+#endif
+
 #if LIBC_HAS_FEATURE(memory_sanitizer)
 #define LIBC_HAS_MEMORY_SANITIZER
+#endif
+
+#if LIBC_HAS_FEATURE(thread_sanitizer) || defined(__SANITIZE_THREAD__)
+#define LIBC_HAS_THREAD_SANITIZER
+#endif
+
+#if defined(LIBC_HAS_ADDRESS_SANITIZER) ||                                     \
+    defined(LIBC_HAS_HWADDRESS_SANITIZER) ||                                   \
+    defined(LIBC_HAS_MEMORY_SANITIZER) || defined(LIBC_HAS_THREAD_SANITIZER)
+#define LIBC_HAS_MEMORY_ACCESS_SANITIZER
 #endif
 
 #ifdef LIBC_HAS_MEMORY_SANITIZER
